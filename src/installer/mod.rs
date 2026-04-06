@@ -8,12 +8,15 @@ use crate::steam;
 use loaders::{get_loader_def, resolve_loader_version};
 
 /// Download a file from a URL into memory.
+/// Limit is set to 500MB to handle large mod loaders and mod files.
 pub(crate) fn download(url: &str) -> Result<Vec<u8>> {
     let data = ureq::get(url)
         .header("User-Agent", "AccessForge")
         .call()
         .with_context(|| format!("failed to download {url}"))?
         .body_mut()
+        .with_config()
+        .limit(500 * 1024 * 1024)
         .read_to_vec()
         .context("failed to read download body")?;
     Ok(data)
