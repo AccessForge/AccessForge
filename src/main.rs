@@ -1,5 +1,3 @@
-#![windows_subsystem = "windows"]
-
 mod cli;
 mod installer;
 mod manifest;
@@ -58,11 +56,6 @@ enum Command {
 }
 
 fn main() -> Result<()> {
-    // Attach to the parent console for CLI output (windows_subsystem = "windows" hides it)
-    if std::env::args().len() > 1 {
-        unsafe { windows_sys::Win32::System::Console::AttachConsole(u32::MAX); }
-    }
-
     // Clean up leftover .old file from a previous update
     updater::cleanup_old();
 

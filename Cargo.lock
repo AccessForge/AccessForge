@@ -17,7 +17,6 @@ dependencies = [
  "thiserror",
  "ureq",
  "versions",
- "windows-sys 0.61.2",
  "wxdragon",
  "zip",
 ]

@@ -1,0 +1,19 @@
+**AccessForge -- 1-click accessibility mod platform**
+
+AccessForge makes it easy to find, install, and update screen reader mods for mainstream games. No manual file copying, no mod loader setup. Download the app, run it, pick a mod, click install. That's it.
+
+It handles everything behind the scenes: finding your game, installing mod loaders, downloading dependencies, and keeping mods up to date. Works with NVDA on Windows 10 and 11.
+
+Download: https://github.com/AccessForge/AccessForge/releases/latest
+
+Windows might show a SmartScreen warning since the exe isn't code-signed yet. Click "More info", then "Run anyway".
+
+**For mod developers:**
+
+If you make accessibility mods and want to reach more players, publishing through AccessForge takes about 10 minutes. You keep your GitHub repo -- no transfers, no central registry, no gatekeeping. Just add a small manifest file to your repo, tag it, and your mod shows up in the app.
+
+Getting started guide: https://github.com/AccessForge/AccessForge/blob/main/docs/getting-started.md
+
+AccessForge is a community project -- not owned by any single person. Contributions welcome, whether that's building mods, reporting bugs, improving docs, or writing code.
+
+GitHub: https://github.com/AccessForge
