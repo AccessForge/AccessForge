@@ -91,6 +91,15 @@ panic = "abort"
 codegen-units = 1
 ```
 
+## Releasing
+
+**Never do this automatically. Only on explicit user request.**
+
+1. Commit all changes and push to GitHub
+2. Trigger the release workflow: `gh workflow run release.yml -f version=<VERSION>`
+3. Wait for the job to finish: `gh run watch`
+4. Pull the version bump commit: `git pull`
+
 ## CLI Commands
 
 ```

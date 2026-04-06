@@ -31,12 +31,15 @@ pub(crate) fn extract_zip(data: &[u8], target: &Path) -> Result<()> {
         let mut file = archive.by_index(i).context("failed to read zip entry")?;
         let name = file.name().to_string();
 
+        // Build a proper path from zip entry name (which uses '/' separators)
+        let rel_path: PathBuf = name.split('/').collect();
+
         if name.ends_with('/') {
-            let dir = target.join(&name);
+            let dir = target.join(&rel_path);
             std::fs::create_dir_all(&dir)
                 .with_context(|| format!("failed to create directory {}", dir.display()))?;
         } else {
-            let out_path = target.join(&name);
+            let out_path = target.join(&rel_path);
             if let Some(parent) = out_path.parent() {
                 std::fs::create_dir_all(parent)?;
             }
