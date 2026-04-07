@@ -4,13 +4,15 @@ use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
 
 use crate::manifest::{LoaderKind, Manifest};
+use crate::registry::http_agent;
 use crate::steam;
 use loaders::{get_loader_def, resolve_loader_version};
 
 /// Download a file from a URL into memory.
 /// Limit is set to 500MB to handle large mod loaders and mod files.
 pub(crate) fn download(url: &str) -> Result<Vec<u8>> {
-    let data = ureq::get(url)
+    let data = http_agent()
+        .get(url)
         .header("User-Agent", "AccessForge")
         .call()
         .with_context(|| format!("failed to download {url}"))?

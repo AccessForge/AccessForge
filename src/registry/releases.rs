@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use crate::manifest::{Source, resolve_asset};
+use crate::registry::http_agent;
 
 const GITHUB_API: &str = "https://api.github.com";
 
@@ -49,7 +50,8 @@ pub fn fetch_github_release_by_tag(
     for tag in &tags_to_try {
         let url = format!("{GITHUB_API}/repos/{owner}/{repo}/releases/tags/{tag}");
 
-        let response: serde_json::Value = match ureq::get(&url)
+        let response: serde_json::Value = match http_agent()
+            .get(&url)
             .header("Accept", "application/vnd.github.v3+json")
             .header("User-Agent", "AccessForge")
             .call()
@@ -92,7 +94,8 @@ pub fn fetch_github_release_by_tag(
 pub fn list_release_tags(owner: &str, repo: &str) -> Result<Vec<String>> {
     let url = format!("{GITHUB_API}/repos/{owner}/{repo}/releases?per_page=100");
 
-    let response: serde_json::Value = ureq::get(&url)
+    let response: serde_json::Value = http_agent()
+        .get(&url)
         .header("Accept", "application/vnd.github.v3+json")
         .header("User-Agent", "AccessForge")
         .call()
@@ -123,7 +126,8 @@ pub fn fetch_latest_release_asset(
 ) -> Result<Option<ReleaseAsset>> {
     let url = format!("{GITHUB_API}/repos/{owner}/{repo}/releases/latest");
 
-    let response: serde_json::Value = match ureq::get(&url)
+    let response: serde_json::Value = match http_agent()
+        .get(&url)
         .header("Accept", "application/vnd.github.v3+json")
         .header("User-Agent", "AccessForge")
         .call()
