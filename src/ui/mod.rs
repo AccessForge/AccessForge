@@ -545,12 +545,10 @@ fn ask_game_path(
 /// Check for app updates and apply if the user confirms.
 /// `manual` = true means the user clicked the button (bypass daily check).
 fn check_and_apply_update(parent: &impl WxWidget, manual: bool) {
-    let info = if manual {
-        // Always check, but still record the timestamp
-        updater::check_and_record()
-    } else {
-        updater::check_for_update()
-    };
+    // Always record the check timestamp so the daily gate works correctly.
+    // Without this, background checks (manual=false) never update the timestamp
+    // and the gate fires on every discovery cycle instead of once per day.
+    let info = updater::check_and_record();
 
     let info = match info {
         Ok(Some(info)) => info,
