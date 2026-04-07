@@ -56,6 +56,13 @@ impl Manifest {
             bail!("id must not be empty");
         }
 
+        if slugify(&self.game.name).is_empty() {
+            bail!(
+                "game.name '{}' produces an empty slug — use at least one alphanumeric character",
+                self.game.name
+            );
+        }
+
         LoaderKind::from_str(self.loader.name())?;
         Source::parse(&self.source).context("invalid source field")?;
 
@@ -357,5 +364,29 @@ release:
         let manifest = Manifest::from_yaml(yaml).unwrap();
         assert_eq!(manifest.name, "Test: Mod");
         assert_eq!(manifest.game.name, "Game: The Sequel");
+    }
+
+    #[test]
+    fn game_name_producing_empty_slug_is_rejected() {
+        let yaml = r#"
+spec: 1
+id: TestMod
+name: Test Mod
+description: A test mod
+author: tester
+version: "1.0.0"
+source: github:tester/test-mod
+game:
+  name: "!!!"
+loader:
+  name: none
+release:
+  asset: "TestMod-{version}.zip"
+"#;
+        let err = Manifest::from_yaml(yaml).unwrap_err();
+        assert!(
+            err.to_string().contains("empty slug"),
+            "expected 'empty slug' in error, got: {err}"
+        );
     }
 }
