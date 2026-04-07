@@ -253,22 +253,14 @@ pub fn run(mock: bool) -> Result<()> {
             };
 
             if let Some(result) = start_install(&manifest, &browse.detail.action_btn, &status_label) {
-                let mut list = browse_for_btn.borrow_mut();
-                let mut entry = list.remove(idx as usize);
-                browse_list.delete(idx as u32);
-
-                entry.0.installed = Some(crate::state::ModState {
-                    name: result.mod_name,
-                    source: entry.0.manifest.source.clone(),
-                    version: result.version.clone(),
-                    installed_at: chrono::Utc::now().to_rfc3339(),
-                    loader: entry.0.manifest.loader.name().to_string(),
-                    local_path: None,
-                    dependencies: std::collections::HashMap::new(),
-                });
-                entry.0.latest_tag = Some(result.version);
-                installed_list.append(&entry.list_label_installed());
-                installed_for_browse.borrow_mut().push(entry);
+                move_to_installed(
+                    idx as usize,
+                    result,
+                    &mut browse_for_btn.borrow_mut(),
+                    &browse_list,
+                    &mut installed_for_browse.borrow_mut(),
+                    &installed_list,
+                );
             }
         });
 
@@ -341,22 +333,14 @@ pub fn run(mock: bool) -> Result<()> {
             };
 
             if let Some(result) = start_install(&manifest, &updates.detail.action_btn, &status_label) {
-                let mut list = update_for_btn.borrow_mut();
-                let mut entry = list.remove(idx as usize);
-                updates_list.delete(idx as u32);
-
-                entry.0.installed = Some(crate::state::ModState {
-                    name: result.mod_name,
-                    source: entry.0.manifest.source.clone(),
-                    version: result.version.clone(),
-                    installed_at: chrono::Utc::now().to_rfc3339(),
-                    loader: entry.0.manifest.loader.name().to_string(),
-                    local_path: None,
-                    dependencies: std::collections::HashMap::new(),
-                });
-                entry.0.latest_tag = Some(result.version);
-                installed_list.append(&entry.list_label_installed());
-                installed_for_update.borrow_mut().push(entry);
+                move_to_installed(
+                    idx as usize,
+                    result,
+                    &mut update_for_btn.borrow_mut(),
+                    &updates_list,
+                    &mut installed_for_update.borrow_mut(),
+                    &installed_list,
+                );
             }
         });
 
@@ -370,6 +354,33 @@ pub fn run(mock: bool) -> Result<()> {
     });
 
     Ok(())
+}
+
+/// Remove `entry` from `source_list`/`source_listbox` at `idx`, mark it as
+/// installed using `result`, then append it to `installed_list`/`installed_listbox`.
+fn move_to_installed(
+    idx: usize,
+    result: install_dialog::InstallResult,
+    source_list: &mut Vec<ModEntry>,
+    source_listbox: &ListBox,
+    installed_list: &mut Vec<ModEntry>,
+    installed_listbox: &ListBox,
+) {
+    let mut entry = source_list.remove(idx);
+    source_listbox.delete(idx as u32);
+
+    entry.0.installed = Some(crate::state::ModState {
+        name: result.mod_name,
+        source: entry.0.manifest.source.clone(),
+        version: result.version.clone(),
+        installed_at: chrono::Utc::now().to_rfc3339(),
+        loader: entry.0.manifest.loader.name().to_string(),
+        local_path: None,
+        dependencies: std::collections::HashMap::new(),
+    });
+    entry.0.latest_tag = Some(result.version);
+    installed_listbox.append(&entry.list_label_installed());
+    installed_list.push(entry);
 }
 
 /// Resolve game path, spawn install worker, and show the install dialog.
