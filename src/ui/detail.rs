@@ -1,7 +1,6 @@
 use crate::worker::LoadedMod;
 use versions::Versioning;
 use wxdragon::prelude::*;
-use wxdragon::widgets::WebView;
 
 /// UI-side mod entry wrapping the shared LoadedMod.
 #[derive(Clone)]
@@ -67,163 +66,303 @@ impl ModEntry {
         format!("{} ({})", self.0.manifest.name, self.0.manifest.game.name)
     }
 
-
-    fn also_installs_html(&self) -> String {
-        let mod_deps: Vec<String> = self.0.manifest.dependencies.iter()
-            .filter(|d| d.dep_type == "mod")
-            .map(|d| html_escape(&d.name))
-            .collect();
-        if mod_deps.is_empty() {
-            return String::new();
-        }
-        format!(r#"<p class="deps">Also installs: {}</p>"#, mod_deps.join(", "))
+    fn meta_text(&self) -> String {
+        let m = &self.0.manifest;
+        format!("For {}, by {}. {}.", m.game.name, m.author, self.version_display())
     }
 
-    fn details_html(&self) -> String {
+    fn also_installs_text(&self) -> String {
+        let mod_deps: Vec<&str> = self
+            .0
+            .manifest
+            .dependencies
+            .iter()
+            .filter(|d| d.dep_type == "mod")
+            .map(|d| d.name.as_str())
+            .collect();
+        if mod_deps.is_empty() {
+            String::new()
+        } else {
+            format!("Also installs: {}", mod_deps.join(", "))
+        }
+    }
+
+    /// Full detail text for the read-only TextCtrl — all sections joined with blank lines.
+    pub fn detail_text(&self) -> String {
+        let m = &self.0.manifest;
+        let mut parts = vec![
+            m.name.clone(),
+            m.description.clone(),
+            self.meta_text(),
+        ];
+        let also = self.also_installs_text();
+        if !also.is_empty() {
+            parts.push(also);
+        }
+        let tech = self.tech_details_text();
+        if !tech.is_empty() {
+            parts.push(tech);
+        }
+        parts.join("\n\n")
+    }
+
+    fn tech_details_text(&self) -> String {
         let m = &self.0.manifest;
         let loader = &m.loader;
 
-        let patch_deps: Vec<String> = m.dependencies.iter()
+        let patch_deps: Vec<&str> = m
+            .dependencies
+            .iter()
             .filter(|d| d.dep_type == "patch")
-            .map(|d| html_escape(&d.name))
+            .map(|d| d.name.as_str())
             .collect();
 
-        let mut details_lines = Vec::new();
-        details_lines.push(format!("Loader: {}", html_escape(loader.name())));
-        if let Some(ver) = loader.version() {
-            details_lines.push(format!("Loader version: {}", html_escape(ver)));
-        }
-        if !patch_deps.is_empty() {
-            details_lines.push(format!("Also installs patches: {}", patch_deps.join(", ")));
-        }
-
-        // Only show details section if there's something beyond just "none" loader with no patches
         if loader.name() == "none" && patch_deps.is_empty() {
             return String::new();
         }
 
-        let inner = details_lines.join("<br>");
-        format!(
-            r#"<details>
-  <summary>Technical details</summary>
-  <p>{inner}</p>
-</details>"#
-        )
-    }
-
-    pub fn detail_html(&self) -> String {
-        let m = &self.0.manifest;
-        let version = self.version_display();
-        let also_installs = self.also_installs_html();
-        let details = self.details_html();
-
-        format!(
-            r#"<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<style>
-  body {{
-    font-family: "Segoe UI", sans-serif;
-    font-size: 14px;
-    margin: 12px;
-    color: #222;
-    line-height: 1.6;
-  }}
-  h1 {{
-    font-size: 1.4em;
-    margin: 0 0 8px 0;
-  }}
-  .meta {{
-    margin: 8px 0;
-    color: #444;
-  }}
-  .deps {{
-    margin-top: 12px;
-    font-style: italic;
-  }}
-  details {{
-    margin-top: 16px;
-    color: #555;
-  }}
-  summary {{
-    cursor: pointer;
-  }}
-</style>
-</head>
-<body>
-  <h1>{name}</h1>
-  <p>{description}</p>
-  <p class="meta">For {game}, by {author}. {version}.</p>
-  {also_installs}
-  {details}
-</body>
-</html>"#,
-            name = html_escape(&m.name),
-            description = html_escape(&m.description),
-            game = html_escape(&m.game.name),
-            author = html_escape(&m.author),
-            version = html_escape(&version),
-        )
+        let mut lines = vec![format!("Loader: {}", loader.name())];
+        if let Some(ver) = loader.version() {
+            lines.push(format!("Loader version: {ver}"));
+        }
+        if !patch_deps.is_empty() {
+            lines.push(format!("Also installs patches: {}", patch_deps.join(", ")));
+        }
+        lines.join("\n")
     }
 }
 
-/// Detail panel with a WebView for rich HTML content and an action button.
+/// Detail panel — a focusable read-only TextCtrl so NVDA reads it on Tab,
+/// plus an action button below.
 #[derive(Copy, Clone)]
 pub struct DetailPanel {
-    pub webview: WebView,
+    detail_text: TextCtrl,
     pub action_btn: Button,
 }
 
 impl DetailPanel {
     pub fn build(parent: &Panel, empty_message: &str) -> Self {
-        let webview = WebView::builder(parent).build();
+        let detail_text = TextCtrl::builder(parent)
+            .with_style(TextCtrlStyle::ReadOnly | TextCtrlStyle::MultiLine)
+            .build();
         let action_btn = Button::builder(parent).with_label("Install").build();
         action_btn.enable(false);
 
         let sizer = BoxSizer::builder(Orientation::Vertical).build();
-        sizer.add(&webview, 1, SizerFlag::Expand | SizerFlag::All, 4);
+        sizer.add(&detail_text, 1, SizerFlag::Expand | SizerFlag::All, 4);
         sizer.add(&action_btn, 0, SizerFlag::All, 8);
         parent.set_sizer(sizer, true);
 
-        let panel = Self { webview, action_btn };
+        let panel = Self { detail_text, action_btn };
         panel.show_empty(empty_message);
         panel
     }
 
     pub fn show_empty(&self, message: &str) {
-        let html = format!(
-            r#"<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="utf-8">
-<style>
-  body {{
-    font-family: "Segoe UI", sans-serif;
-    font-size: 14px;
-    margin: 24px;
-    color: #666;
-  }}
-</style>
-</head>
-<body>
-  <p>{}</p>
-</body>
-</html>"#,
-            html_escape(message)
-        );
-        self.webview.set_page(&html, "about:blank");
+        self.detail_text.set_value(message);
+        self.action_btn.enable(false);
     }
 
     pub fn populate(&self, entry: &ModEntry) {
-        self.webview.set_page(&entry.detail_html(), "about:blank");
+        self.detail_text.set_value(&entry.detail_text());
         self.action_btn.set_label(entry.action_label());
         self.action_btn.enable(true);
     }
 }
 
-fn html_escape(s: &str) -> String {
-    s.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::manifest::{Dependency, Game, LoaderField, Manifest, Release};
+    use crate::state::ModState;
+    use crate::worker::LoadedMod;
+    use std::collections::HashMap;
+
+    fn base_manifest() -> Manifest {
+        Manifest {
+            spec: 1,
+            id: "test-mod".to_string(),
+            name: "Test Mod".to_string(),
+            description: "A test mod".to_string(),
+            author: "TestAuthor".to_string(),
+            version: "1.0.0".to_string(),
+            source: "github:owner/repo".to_string(),
+            license: None,
+            game: Game { name: "Test Game".to_string(), store: None },
+            loader: LoaderField { name: "ue4ss".to_string(), version: None, arch: None },
+            release: Release { asset: "TestMod-{version}.zip".to_string() },
+            dependencies: vec![],
+        }
+    }
+
+    fn installed_state(version: &str) -> ModState {
+        ModState {
+            name: "Test Mod".to_string(),
+            source: "github:owner/repo".to_string(),
+            version: version.to_string(),
+            installed_at: "2024-01-01T00:00:00Z".to_string(),
+            loader: "ue4ss".to_string(),
+            local_path: None,
+            dependencies: HashMap::new(),
+        }
+    }
+
+    fn entry(installed: Option<ModState>, latest_tag: Option<&str>) -> ModEntry {
+        ModEntry(LoadedMod {
+            manifest: base_manifest(),
+            installed,
+            latest_tag: latest_tag.map(|s| s.to_string()),
+        })
+    }
+
+    // --- has_update ---
+
+    #[test]
+    fn has_update_not_installed_is_false() {
+        assert!(!entry(None, Some("v1.0.0")).has_update());
+    }
+
+    #[test]
+    fn has_update_no_latest_tag_is_false() {
+        assert!(!entry(Some(installed_state("1.0.0")), None).has_update());
+    }
+
+    #[test]
+    fn has_update_same_version_is_false() {
+        assert!(!entry(Some(installed_state("1.0.0")), Some("v1.0.0")).has_update());
+    }
+
+    #[test]
+    fn has_update_newer_available_is_true() {
+        assert!(entry(Some(installed_state("1.0.0")), Some("v1.1.0")).has_update());
+    }
+
+    #[test]
+    fn has_update_installed_is_newer_is_false() {
+        assert!(!entry(Some(installed_state("2.0.0")), Some("v1.0.0")).has_update());
+    }
+
+    // --- action_label ---
+
+    #[test]
+    fn action_label_not_installed() {
+        assert_eq!(entry(None, Some("v1.0.0")).action_label(), "Install");
+    }
+
+    #[test]
+    fn action_label_installed_up_to_date() {
+        assert_eq!(
+            entry(Some(installed_state("1.0.0")), Some("v1.0.0")).action_label(),
+            "Reinstall"
+        );
+    }
+
+    #[test]
+    fn action_label_update_available() {
+        assert_eq!(
+            entry(Some(installed_state("1.0.0")), Some("v1.1.0")).action_label(),
+            "Update"
+        );
+    }
+
+    // --- version_display ---
+
+    #[test]
+    fn version_display_not_installed_shows_latest() {
+        assert_eq!(entry(None, Some("v1.5.0")).version_display(), "Version 1.5.0");
+    }
+
+    #[test]
+    fn version_display_installed_current() {
+        assert_eq!(
+            entry(Some(installed_state("1.5.0")), Some("v1.5.0")).version_display(),
+            "Version 1.5.0"
+        );
+    }
+
+    #[test]
+    fn version_display_update_available_shows_both() {
+        assert_eq!(
+            entry(Some(installed_state("1.0.0")), Some("v1.5.0")).version_display(),
+            "Installed: 1.0.0. Latest: 1.5.0"
+        );
+    }
+
+    #[test]
+    fn version_display_falls_back_to_manifest_version() {
+        assert_eq!(entry(None, None).version_display(), "Version 1.0.0");
+    }
+
+    // --- also_installs_text ---
+
+    #[test]
+    fn also_installs_text_no_deps_is_empty() {
+        assert_eq!(entry(None, None).also_installs_text(), "");
+    }
+
+    #[test]
+    fn also_installs_text_only_patches_is_empty() {
+        let mut e = entry(None, None);
+        e.0.manifest.dependencies = vec![Dependency {
+            name: "utoc-bypass".to_string(),
+            dep_type: "patch".to_string(),
+            source: "github:owner/utoc-bypass".to_string(),
+            asset: "utoc-{version}.zip".to_string(),
+            version: "1.0.0".to_string(),
+        }];
+        assert_eq!(e.also_installs_text(), "");
+    }
+
+    #[test]
+    fn also_installs_text_mod_dep_listed() {
+        let mut e = entry(None, None);
+        e.0.manifest.dependencies = vec![Dependency {
+            name: "Screen Reader Helper".to_string(),
+            dep_type: "mod".to_string(),
+            source: "github:owner/helper".to_string(),
+            asset: "helper-{version}.zip".to_string(),
+            version: "1.0.0".to_string(),
+        }];
+        assert_eq!(e.also_installs_text(), "Also installs: Screen Reader Helper");
+    }
+
+    // --- tech_details_text ---
+
+    #[test]
+    fn tech_details_text_none_loader_no_patches_is_empty() {
+        let mut e = entry(None, None);
+        e.0.manifest.loader = LoaderField { name: "none".to_string(), version: None, arch: None };
+        assert_eq!(e.tech_details_text(), "");
+    }
+
+    #[test]
+    fn tech_details_text_ue4ss_shows_loader_name() {
+        let text = entry(None, None).tech_details_text();
+        assert!(text.contains("Loader: ue4ss"), "got: {text}");
+        assert!(!text.contains("Loader version:"), "got: {text}");
+    }
+
+    #[test]
+    fn tech_details_text_shows_loader_version() {
+        let mut e = entry(None, None);
+        e.0.manifest.loader =
+            LoaderField { name: "ue4ss".to_string(), version: Some("5.4".to_string()), arch: None };
+        let text = e.tech_details_text();
+        assert!(text.contains("Loader version: 5.4"), "got: {text}");
+    }
+
+    #[test]
+    fn tech_details_text_none_loader_with_patch_shows_patch() {
+        let mut e = entry(None, None);
+        e.0.manifest.loader = LoaderField { name: "none".to_string(), version: None, arch: None };
+        e.0.manifest.dependencies = vec![Dependency {
+            name: "utoc-bypass".to_string(),
+            dep_type: "patch".to_string(),
+            source: "github:owner/utoc-bypass".to_string(),
+            asset: "utoc-{version}.zip".to_string(),
+            version: "1.0.0".to_string(),
+        }];
+        let text = e.tech_details_text();
+        assert!(text.contains("Also installs patches: utoc-bypass"), "got: {text}");
+    }
 }
