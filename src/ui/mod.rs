@@ -128,7 +128,10 @@ pub fn run(mock: bool) -> Result<()> {
             Rc::new(RefCell::new(None));
 
         // --- Spawn discovery ---
-        let state = AppState::load().unwrap_or_else(|_| AppState::new());
+        let state = AppState::load().unwrap_or_else(|e| {
+            eprintln!("warning: failed to load state, starting fresh: {e:#}");
+            AppState::new()
+        });
         let rx = if mock {
             worker::spawn_discover_mock()
         } else {
@@ -201,7 +204,10 @@ pub fn run(mock: bool) -> Result<()> {
                         drop(borrow);
                         // Auto-check for app updates after discovery (daily)
                         if !mock {
-                            let state = AppState::load().unwrap_or_else(|_| AppState::new());
+                            let state = AppState::load().unwrap_or_else(|e| {
+            eprintln!("warning: failed to load state, starting fresh: {e:#}");
+            AppState::new()
+        });
                             if state.should_check_updates() {
                                 check_and_apply_update(&update_btn_for_timer, false);
                             }
@@ -380,7 +386,10 @@ fn start_install(
     status_label: &StaticText,
 ) -> Option<install_dialog::InstallResult> {
 
-    let state = AppState::load().unwrap_or_else(|_| AppState::new());
+    let state = AppState::load().unwrap_or_else(|e| {
+            eprintln!("warning: failed to load state, starting fresh: {e:#}");
+            AppState::new()
+        });
     let game_slug = manifest.game_slug();
     let saved_path = state
         .games
@@ -394,7 +403,10 @@ fn start_install(
             match ask_game_path(parent, &manifest.game.name, manifest.loader_kind().ok()) {
                 Some(p) => {
                     // Save the path for next time
-                    let mut state = AppState::load().unwrap_or_else(|_| AppState::new());
+                    let mut state = AppState::load().unwrap_or_else(|e| {
+            eprintln!("warning: failed to load state, starting fresh: {e:#}");
+            AppState::new()
+        });
                     state.get_or_create_game(
                         &manifest.game_slug(),
                         &manifest.game.name,
