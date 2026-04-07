@@ -1,3 +1,4 @@
+use crate::manifest::normalize_version;
 use crate::worker::LoadedMod;
 use versions::Versioning;
 use wxdragon::prelude::*;
@@ -10,8 +11,8 @@ pub struct ModEntry(pub LoadedMod);
 impl ModEntry {
     pub fn has_update(&self) -> bool {
         if let (Some(inst), Some(tag)) = (&self.0.installed, &self.0.latest_tag) {
-            let installed_ver = inst.version.trim_start_matches('v');
-            let latest_ver = tag.trim_start_matches('v');
+            let installed_ver = normalize_version(&inst.version);
+            let latest_ver = normalize_version(tag);
 
             match (Versioning::new(installed_ver), Versioning::new(latest_ver)) {
                 (Some(iv), Some(lv)) => lv > iv,
@@ -51,7 +52,7 @@ impl ModEntry {
         self.0
             .latest_tag
             .as_deref()
-            .map(|t| t.strip_prefix('v').unwrap_or(t))
+            .map(normalize_version)
             .unwrap_or(&self.0.manifest.version)
     }
 
