@@ -115,7 +115,9 @@ pub fn discover_all(tx: ProgressTx, mut state: AppState) {
 
     // Save updated cache
     if cache_updated {
-        let _ = state.save();
+        if let Err(e) = state.save() {
+            eprintln!("warning: failed to save manifest cache: {e:#}");
+        }
     }
 
     report(&tx, ProgressMsg::DiscoveryFinished);
