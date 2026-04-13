@@ -19,7 +19,7 @@ thiserror = "2.0.18"
 ureq = { version = "3.3.0", features = ["json"] }
 versions = "7.0.0"
 wxdragon = { version = "0.9.14", features = ["webview"] }
-zip = "8.4.0"
+zip = "8.5.1"
 
 [profile.release]
 strip = true
