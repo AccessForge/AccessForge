@@ -358,4 +358,29 @@ release:
         assert_eq!(manifest.name, "Test: Mod");
         assert_eq!(manifest.game.name, "Game: The Sequel");
     }
+
+    #[test]
+    fn slugify_empty_string_returns_empty() {
+        assert_eq!(slugify(""), "");
+    }
+
+    #[test]
+    fn slugify_only_symbols_returns_empty() {
+        assert_eq!(slugify("!!!***"), "");
+    }
+
+    #[test]
+    fn slugify_trims_leading_and_trailing_hyphens() {
+        assert_eq!(slugify("!Hello!"), "hello");
+    }
+
+    #[test]
+    fn resolve_asset_no_placeholder_returns_as_is() {
+        assert_eq!(resolve_asset("mod.zip", "1.0.0"), "mod.zip");
+    }
+
+    #[test]
+    fn resolve_asset_multiple_placeholders_replaced() {
+        assert_eq!(resolve_asset("{version}-{version}.zip", "2.0.0"), "2.0.0-2.0.0.zip");
+    }
 }

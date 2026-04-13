@@ -150,3 +150,35 @@ fn append_log(log_list: &ListBox, msg: &str) {
         log_list.set_selection(count - 1, true);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn step_increments_sum_does_not_exceed_95() {
+        let total = step_increment(&InstallStep::InstallingLoader)
+            + step_increment(&InstallStep::InstallingDependency)
+            + step_increment(&InstallStep::InstallingMod)
+            + step_increment(&InstallStep::PostInstall)
+            + step_increment(&InstallStep::SavingState);
+        assert!(
+            total <= 95,
+            "steps sum {total} would overflow gauge before Done fires"
+        );
+    }
+
+    #[test]
+    fn each_step_increment_is_positive() {
+        let steps = [
+            InstallStep::InstallingLoader,
+            InstallStep::InstallingDependency,
+            InstallStep::InstallingMod,
+            InstallStep::PostInstall,
+            InstallStep::SavingState,
+        ];
+        for step in &steps {
+            assert!(step_increment(step) > 0, "step_increment for {step:?} must be positive");
+        }
+    }
+}

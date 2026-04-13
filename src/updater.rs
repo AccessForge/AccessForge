@@ -33,15 +33,22 @@ pub fn check_for_update() -> Result<Option<UpdateInfo>> {
 
     let latest_ver = asset.tag.strip_prefix('v').unwrap_or(&asset.tag);
 
-    let current = Versioning::new(CURRENT_VERSION);
-    let latest = Versioning::new(latest_ver);
-
-    match (current, latest) {
-        (Some(c), Some(l)) if l > c => Ok(Some(UpdateInfo {
+    if is_newer(CURRENT_VERSION, latest_ver) {
+        Ok(Some(UpdateInfo {
             version: latest_ver.to_string(),
             download_url: asset.download_url,
-        })),
-        _ => Ok(None),
+        }))
+    } else {
+        Ok(None)
+    }
+}
+
+/// Returns true if `candidate` is a strictly higher version than `current`.
+/// Both strings should have the `v` prefix already stripped.
+pub(crate) fn is_newer(current: &str, candidate: &str) -> bool {
+    match (Versioning::new(current), Versioning::new(candidate)) {
+        (Some(c), Some(l)) => l > c,
+        _ => false,
     }
 }
 
@@ -120,6 +127,41 @@ pub fn restart() -> ! {
         .spawn();
 
     std::process::exit(0);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn is_newer_true_when_patch_bump() {
+        assert!(is_newer("1.0.0", "1.0.1"));
+    }
+
+    #[test]
+    fn is_newer_true_when_minor_bump() {
+        assert!(is_newer("1.0.0", "1.1.0"));
+    }
+
+    #[test]
+    fn is_newer_true_when_major_bump() {
+        assert!(is_newer("1.0.0", "2.0.0"));
+    }
+
+    #[test]
+    fn is_newer_false_when_same() {
+        assert!(!is_newer("1.0.0", "1.0.0"));
+    }
+
+    #[test]
+    fn is_newer_false_when_candidate_older() {
+        assert!(!is_newer("2.0.0", "1.9.9"));
+    }
+
+    #[test]
+    fn is_newer_false_on_invalid_version_strings() {
+        assert!(!is_newer("not-a-version", "also-not"));
+    }
 }
 
 /// Delete the .old file from a previous update, if it exists.
