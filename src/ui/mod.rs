@@ -231,6 +231,9 @@ pub fn run(mock: bool) -> Result<()> {
         let browse_list_panel = browse.list_panel;
         let browse_detail_panel = browse.detail_panel;
         browse_list.on_selection_changed(move |_| {
+            // get_selection() returns Some(i32) only when an item is selected.
+            // wxWidgets guarantees the value is a valid non-negative list index,
+            // so `idx as usize` is safe — it never wraps.
             if let Some(idx) = browse_list.get_selection() {
                 let mods = browse_for_sel.borrow();
                 if let Some(entry) = mods.get(idx as usize) {
