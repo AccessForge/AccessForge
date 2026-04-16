@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use crate::registry::http_agent;
 
 const GITHUB_API: &str = "https://api.github.com";
 const TOPIC: &str = "accessforge-mod";
@@ -16,7 +17,8 @@ pub fn discover_mods() -> Result<Vec<DiscoveredMod>> {
         "{GITHUB_API}/search/repositories?q=topic:{TOPIC}&sort=updated&per_page=100"
     );
 
-    let response: serde_json::Value = ureq::get(&url)
+    let response: serde_json::Value = http_agent()
+        .get(&url)
         .header("Accept", "application/vnd.github.v3+json")
         .header("User-Agent", "AccessForge")
         .call()

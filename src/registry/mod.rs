@@ -7,6 +7,16 @@ pub use releases::*;
 use anyhow::{Context, Result};
 use crate::manifest::Source;
 
+/// Shared HTTP agent with a 30-second global timeout.
+/// All network calls go through this so that a slow or unresponsive server
+/// cannot hang the application indefinitely.
+pub(crate) fn http_agent() -> ureq::Agent {
+    ureq::Agent::config_builder()
+        .timeout_global(Some(std::time::Duration::from_secs(30)))
+        .build()
+        .into()
+}
+
 /// Fetch a manifest based on source type.
 pub fn fetch_manifest_for_source(source: &Source) -> Result<String> {
     match source {
@@ -44,7 +54,8 @@ pub fn fetch_manifest_yaml_cached(
         "https://raw.githubusercontent.com/{owner}/{repo}/HEAD/accessforge.yml"
     );
 
-    let mut req = ureq::get(&url)
+    let mut req = http_agent()
+        .get(&url)
         .header("User-Agent", "AccessForge");
 
     if let Some(etag) = etag {
@@ -76,7 +87,8 @@ pub fn fetch_manifest_yaml_cached(
 fn fetch_manifest_url(base_url: &str) -> Result<String> {
     let url = format!("{}/accessforge.yml", base_url.trim_end_matches('/'));
 
-    let body = ureq::get(&url)
+    let body = http_agent()
+        .get(&url)
         .header("User-Agent", "AccessForge")
         .call()
         .with_context(|| format!("failed to fetch manifest from {url}"))?
