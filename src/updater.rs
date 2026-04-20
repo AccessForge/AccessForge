@@ -52,7 +52,9 @@ pub fn check_and_record() -> Result<Option<UpdateInfo>> {
     // Record the check regardless of outcome
     if let Ok(mut state) = AppState::load() {
         state.mark_update_checked();
-        let _ = state.save();
+        if let Err(e) = state.save() {
+            eprintln!("warning: failed to save update check timestamp: {e:#}");
+        }
     }
 
     result

@@ -312,7 +312,16 @@ pub fn run(mock: bool) -> Result<()> {
                 entry.0.manifest.clone()
             };
 
-            start_install(&manifest, &installed.detail.action_btn, &status_label);
+            if let Some(result) = start_install(&manifest, &installed.detail.action_btn, &status_label) {
+                let mut mods = installed_for_btn.borrow_mut();
+                if let Some(entry) = mods.get_mut(idx as usize) {
+                    if let Some(ref mut inst) = entry.0.installed {
+                        inst.version.clone_from(&result.version);
+                    }
+                    installed_list.set_string(idx as u32, &entry.list_label_installed());
+                    installed.detail.populate(entry);
+                }
+            }
         });
 
         // --- Updates tab events ---
@@ -403,7 +412,9 @@ fn start_install(
                         &manifest.game.name,
                         &p.to_string_lossy(),
                     );
-                    let _ = state.save();
+                    if let Err(e) = state.save() {
+                        eprintln!("warning: failed to save game path: {e:#}");
+                    }
                     p
                 }
                 None => {
