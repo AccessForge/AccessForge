@@ -72,9 +72,10 @@ All core features for end users and mod developers are implemented. The app can 
 - Four tabs: Browse, Installed, Updates, About
 - Reusable tab builder (`tabs.rs`) — eliminates tab construction duplication
 - SplitterWindow: list on left, detail panel on right (hidden until selection)
-- WebView detail panel with HTML (mod name, description, "For [game], by [author]", version)
+- Native StaticText detail panel (name, description, meta, deps, technical details as plain labels)
+  - Replaced WebView to eliminate screen reader focus trap caused by `<details>/<summary>` element
+  - Technical details always visible inline — no collapsible element, no focus trap
 - "Also installs" for mod-type dependencies
-- Collapsible "Technical details" for loader info and patch dependencies
 - Screen reader labels above each list
 - Detail panel hidden when no mod selected
 - Install/Reinstall/Update buttons (disabled until selection, only disabled during install)
@@ -131,7 +132,7 @@ All core features for end users and mod developers are implemented. The app can 
 - `CLAUDE.md` — project instructions for AI assistants
 
 ### Tests
-- 16 passing tests covering:
+- 78 passing tests covering:
   - Manifest parsing (valid, invalid, GitHub source, HTTP source, backward compat)
   - Source parsing (GitHub, URL, invalid)
   - Asset template resolution
@@ -139,6 +140,10 @@ All core features for end users and mod developers are implemented. The app can 
   - State file save/load
   - Loader version resolution (latest tag, partial match, false prefix rejection)
   - UE4SS mods.txt (new file, enable disabled, already enabled)
+  - `ModEntry` logic: has_update, action_label, version_display, also_installs_text, tech_details_text (19 tests)
+  - `installer::resolve_game_path`: saved path, missing path, no steam ID
+  - `installer::extract_zip`: flat file, nested file, multiple files
+  - `updater::is_newer`: version comparison edge cases (7 tests)
 
 ## Future (v2+)
 - Local dependency overrides (`--local utoc-bypass=../path` flag on install, managed via `accessforge.dev.yml`, gitignored, explicit feedback)
