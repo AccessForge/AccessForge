@@ -174,7 +174,10 @@ pub fn run_install(tx: ProgressTx, manifest: Manifest, game_root: PathBuf) {
 
     let version = asset.tag.trim_start_matches('v').to_string();
 
-    let mut state = AppState::load().unwrap_or_else(|_| AppState::new());
+    let mut state = AppState::load().unwrap_or_else(|e| {
+        eprintln!("warning: failed to load state, starting fresh: {e:#}");
+        AppState::new()
+    });
     let game_slug = manifest.game_slug();
     let game = state.get_or_create_game(
         &game_slug,

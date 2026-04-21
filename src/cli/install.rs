@@ -41,7 +41,10 @@ pub fn dev_install(from: &Path) -> Result<()> {
     println!("Mod: {}", manifest.name);
     println!("Game: {}", manifest.game.name);
 
-    let state = AppState::load().unwrap_or_else(|_| AppState::new());
+    let state = AppState::load().unwrap_or_else(|e| {
+        eprintln!("warning: failed to load state, starting fresh: {e:#}");
+        AppState::new()
+    });
     let game_slug = manifest.game_slug();
     let saved_path = state.games.get(&game_slug).map(|g| g.path.clone());
 
@@ -118,7 +121,10 @@ pub fn dev_install_url(url: &str) -> Result<()> {
     println!("Mod: {} ({})", manifest.name, manifest.id);
     println!("Game: {}", manifest.game.name);
 
-    let state = AppState::load().unwrap_or_else(|_| AppState::new());
+    let state = AppState::load().unwrap_or_else(|e| {
+        eprintln!("warning: failed to load state, starting fresh: {e:#}");
+        AppState::new()
+    });
     let game_slug = manifest.game_slug();
     let saved_path = state.games.get(&game_slug).map(|g| g.path.clone());
 
@@ -197,7 +203,10 @@ fn save_install_state(
     game_root: &Path,
     local_path: Option<&Path>,
 ) -> Result<()> {
-    let mut state = AppState::load().unwrap_or_else(|_| AppState::new());
+    let mut state = AppState::load().unwrap_or_else(|e| {
+        eprintln!("warning: failed to load state, starting fresh: {e:#}");
+        AppState::new()
+    });
     let game_slug = manifest.game_slug();
     let game = state.get_or_create_game(
         &game_slug,
