@@ -1,6 +1,6 @@
 use crate::installer;
 use crate::installer::loaders::get_loader_def;
-use crate::manifest::{DepType, Manifest, Source, slugify};
+use crate::manifest::{DepType, Manifest, Source, normalize_version, slugify};
 use crate::registry;
 use crate::state::{AppState, ModState};
 use crate::worker::{InstallStep, ProgressMsg, ProgressTx, TaskResult, report, status};
@@ -172,7 +172,7 @@ pub fn run_install(tx: ProgressTx, manifest: Manifest, game_root: PathBuf) {
         detail: String::new(),
     });
 
-    let version = asset.tag.trim_start_matches('v').to_string();
+    let version = normalize_version(&asset.tag).to_string();
 
     let mut state = AppState::load().unwrap_or_else(|e| {
         eprintln!("warning: failed to load state, starting fresh: {e:#}");

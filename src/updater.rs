@@ -2,6 +2,7 @@ use anyhow::{Context, Result};
 use versions::Versioning;
 
 use crate::installer;
+use crate::manifest::normalize_version;
 use crate::registry;
 use crate::state::AppState;
 use crate::worker::{InstallStep, ProgressMsg, ProgressTx, TaskResult, report};
@@ -31,7 +32,7 @@ pub fn check_for_update() -> Result<Option<UpdateInfo>> {
         return Ok(None);
     };
 
-    let latest_ver = asset.tag.strip_prefix('v').unwrap_or(&asset.tag);
+    let latest_ver = normalize_version(&asset.tag);
 
     let current = Versioning::new(CURRENT_VERSION);
     let latest = Versioning::new(latest_ver);

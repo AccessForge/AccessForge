@@ -97,6 +97,12 @@ impl Manifest {
     }
 }
 
+/// Strip a leading `v` prefix from a version string (e.g. `"v1.2.3"` → `"1.2.3"`).
+/// Returns the string unchanged if it does not start with `v`.
+pub fn normalize_version(v: &str) -> &str {
+    v.strip_prefix('v').unwrap_or(v)
+}
+
 /// Convert a name to a URL-safe slug.
 pub fn slugify(name: &str) -> String {
     name.to_lowercase()

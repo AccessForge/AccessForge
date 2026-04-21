@@ -1,5 +1,5 @@
 use anyhow::{Context, Result, bail};
-use crate::manifest::LoaderKind;
+use crate::manifest::{LoaderKind, normalize_version};
 use crate::registry;
 use std::path::Path;
 use versions::Versioning;
@@ -38,7 +38,7 @@ static BEPINEX: LoaderDef = LoaderDef {
     github_owner: "BepInEx",
     github_repo: "BepInEx",
     asset_fn: |_tag, arch| {
-        let version = _tag.strip_prefix('v').unwrap_or(_tag);
+        let version = normalize_version(_tag);
         format!("BepInEx_win_{arch}_{version}.zip")
     },
     mod_dir: "BepInEx/plugins",
@@ -90,7 +90,7 @@ pub fn resolve_loader_version(
             // Fetch latest release
             let tags = registry::list_release_tags(def.github_owner, def.github_repo)?;
             let tag = find_latest_tag(&tags)?;
-            let version = tag.strip_prefix('v').unwrap_or(&tag).to_string();
+            let version = normalize_version(&tag).to_string();
             Ok((tag, version))
         }
         Some(req) => {
@@ -102,13 +102,13 @@ pub fn resolve_loader_version(
                 return Ok((exact_v, req.to_string()));
             }
             if tags.contains(&req.to_string()) {
-                let version = req.strip_prefix('v').unwrap_or(req).to_string();
+                let version = normalize_version(req).to_string();
                 return Ok((req.to_string(), version));
             }
 
             // Partial match: find all tags that start with the requested prefix
             let matching = find_best_partial_match(&tags, req)?;
-            let version = matching.strip_prefix('v').unwrap_or(&matching).to_string();
+            let version = normalize_version(&matching).to_string();
             Ok((matching, version))
         }
     }
@@ -122,8 +122,8 @@ fn find_latest_tag(tags: &[String]) -> Result<String> {
 
     tags.iter()
         .max_by(|a, b| {
-            let va = Versioning::new(a.strip_prefix('v').unwrap_or(a));
-            let vb = Versioning::new(b.strip_prefix('v').unwrap_or(b));
+            let va = Versioning::new(normalize_version(a));
+            let vb = Versioning::new(normalize_version(b));
             match (va, vb) {
                 (Some(va), Some(vb)) => va.cmp(&vb),
                 (Some(_), None) => std::cmp::Ordering::Greater,
@@ -142,7 +142,7 @@ fn find_best_partial_match(tags: &[String], prefix: &str) -> Result<String> {
     let matching: Vec<&String> = tags
         .iter()
         .filter(|tag| {
-            let ver = tag.strip_prefix('v').unwrap_or(tag);
+            let ver = normalize_version(tag);
             ver.starts_with(prefix)
                 && (ver.len() == prefix.len() || ver.as_bytes().get(prefix.len()) == Some(&b'.'))
         })
@@ -155,8 +155,8 @@ fn find_best_partial_match(tags: &[String], prefix: &str) -> Result<String> {
     matching
         .iter()
         .max_by(|a, b| {
-            let va = Versioning::new(a.strip_prefix('v').unwrap_or(a));
-            let vb = Versioning::new(b.strip_prefix('v').unwrap_or(b));
+            let va = Versioning::new(normalize_version(a));
+            let vb = Versioning::new(normalize_version(b));
             match (va, vb) {
                 (Some(va), Some(vb)) => va.cmp(&vb),
                 (Some(_), None) => std::cmp::Ordering::Greater,
