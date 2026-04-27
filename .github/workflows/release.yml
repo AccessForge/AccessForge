@@ -59,7 +59,7 @@ jobs:
         run: echo "LIBCLANG_PATH=C:/LLVM/bin" >> $GITHUB_ENV
 
       - name: Sccache
-        uses: mozilla-actions/sccache-action@v0.0.9
+        uses: mozilla-actions/sccache-action@v0.0.10
 
       - name: Rust cache
         uses: Swatinem/rust-cache@v2
